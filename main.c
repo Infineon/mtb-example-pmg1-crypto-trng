@@ -44,11 +44,19 @@
 #include "cybsp.h"
 #include "cy_cryptolite.h"
 #include "stdio.h"
+#include <inttypes.h>
+
 /*******************************************************************************
 * Macros
 *******************************************************************************/
 /* Macro for the maximum value of the random number generated in bits */
 #define ASCII_RETURN_CARRIAGE           (0x0D)
+
+/* Debug print macro to enable UART print */
+#define DEBUG_PRINT                     (0u)
+
+/* CY ASSERT failure */
+#define CY_ASSERT_FAILED                (0u)
 
 /*******************************************************************************
 * Function Prototypes
@@ -59,6 +67,11 @@ void generate_password();
 * Global Variable
 *******************************************************************************/
 cy_stc_scb_uart_context_t CYBSP_UART_context;
+
+#if DEBUG_PRINT
+/* Variable used for tracking the print status */
+volatile bool ENTER_LOOP = true;
+#endif
 
 /*******************************************************************************
 * Function Name: main
@@ -85,7 +98,7 @@ int main(void)
     /* Board init failed. Stop program execution */
     if (result != CY_RSLT_SUCCESS)
     {
-        CY_ASSERT(0);
+        CY_ASSERT(CY_ASSERT_FAILED);
     }
 
     /* Configure and enable the UART peripheral */
@@ -104,18 +117,23 @@ int main(void)
     Cy_SCB_UART_PutString(CYBSP_UART_HW, "Press the Enter key to generate new One-Time Password (OTP):\r\n\n");
 
     for(;;)
+    {
+        /* Check if "Enter" key is received from the terminal; */
+        if (Cy_SCB_UART_Get(CYBSP_UART_HW) == ASCII_RETURN_CARRIAGE)
         {
-
-            /* Check if "Enter" key is received from the terminal; */
-            if (Cy_SCB_UART_Get(CYBSP_UART_HW) == ASCII_RETURN_CARRIAGE)
-            {
-                /* Generate a password of 8 characters in length */
-                generate_password();
-            }
+            /* Generate a password of 8 characters in length */
+            generate_password();
         }
+
+#if DEBUG_PRINT
+        if (ENTER_LOOP)
+        {
+            Cy_SCB_UART_PutString(CYBSP_UART_HW, "Entered for loop\r\n");
+            ENTER_LOOP = false;
+        }
+#endif
     }
-
-
+}
 
 /*******************************************************************************
 * Function Name: generate_password
